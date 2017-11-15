@@ -9,14 +9,13 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 
 public class AZSplashActivity extends AppCompatActivity {
-    private Handler handler = new Handler();
-    private LocationManager mListener;
+    private final Handler handler = new Handler();
     private boolean isNetworkLocation, isGPSLocation;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        mListener = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        LocationManager mListener = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         if(mListener != null){
             isGPSLocation = mListener.isProviderEnabled(LocationManager.GPS_PROVIDER);
             isNetworkLocation = mListener.isProviderEnabled(LocationManager.NETWORK_PROVIDER);

@@ -1,5 +1,6 @@
 package com.pyo.google.current.location;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
@@ -8,7 +9,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
@@ -19,22 +19,24 @@ import android.support.v7.app.AppCompatActivity;
  */
 
 public final class PermissionSettingUtils {
+    public static final int REQUEST_CODE = 400;
     /**
      * Runtime Permission Check
      */
-    public static void requestPermission(AppCompatActivity activity, int requestID,
-                                         String permission) {
-        ActivityCompat.requestPermissions(activity, new String[]{permission}, requestID);
+    public static void requestPermission(AppCompatActivity activity) {
+        ActivityCompat.requestPermissions(activity, new String[]{
+                                      Manifest.permission.ACCESS_FINE_LOCATION},
+                                      REQUEST_CODE);
     }
 
     /**
      * 위치 권한이 부여되어 있는지 알아내는 공통 메소드
      */
-    public static boolean isPermissionGranted(String[] grantPermissions, int[] grantResults,
-                                              String permission) {
+    public static boolean isPermissionGranted(String[] grantPermissions,
+                                              int[] grantResults){
         int permissionSize = grantPermissions.length;
         for (int i = 0; i < permissionSize; i++) {
-            if (permission.equals(grantPermissions[i])) {
+            if (Manifest.permission.ACCESS_FINE_LOCATION.equals(grantPermissions[i])) {
                 return grantResults[i] == PackageManager.PERMISSION_GRANTED;
             }
         }

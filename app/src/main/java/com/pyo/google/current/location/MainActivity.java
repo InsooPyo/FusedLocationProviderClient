@@ -1,8 +1,6 @@
 package com.pyo.google.current.location;
 
 import android.Manifest;
-import android.content.Context;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
@@ -42,7 +40,7 @@ import com.google.android.gms.tasks.Task;
 public class MainActivity extends AppCompatActivity {
 
     /**
-     * FusedLocationProviderApi의 요청 파라미터를 저장
+     * FusedLocationProviderApi 요청 파라미터를 저장
      */
     private LocationRequest mLocationRequest;
 
@@ -58,7 +56,7 @@ public class MainActivity extends AppCompatActivity {
     private Location mCurrentLocation;
 
     //구글 로케이션을 연결/연결실패를 처리해주는 클라이언트(play-services 11.0.0부터 바뀜)
-    FusedLocationProviderClient mFusedLocationClient;
+    private FusedLocationProviderClient mFusedLocationClient;
 
     private String provider;
     @Override
@@ -90,13 +88,13 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    GoogleMap mMap;
+    private GoogleMap mMap;
 
     private void checkMyPermissionLocation() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             //Permission Check
-            PermissionSettingUtils.requestPermission(this, 10, Manifest.permission.ACCESS_FINE_LOCATION);
+            PermissionSettingUtils.requestPermission(this);
         } else {
             //권한을 받았다면 위치찾기 세팅을 시작한다
             initGoogleMapLocation();
@@ -106,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
     private void initGoogleMapLocation() {
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         /**
-         * Location Setting에 대한  API를 제공
+         * Location Setting API를
          */
         SettingsClient mSettingsClient = LocationServices.getSettingsClient(this);
         /*
@@ -194,11 +192,11 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         //요청코드가 맞지 않는다면
-        if (requestCode != 10) {
+        if (requestCode != PermissionSettingUtils.REQUEST_CODE) {
             return;
         }
-        if (PermissionSettingUtils.isPermissionGranted(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, grantResults,
-                Manifest.permission.ACCESS_FINE_LOCATION)) {
+        if (PermissionSettingUtils.isPermissionGranted(new String[]{
+                      Manifest.permission.ACCESS_FINE_LOCATION}, grantResults)) {
             //허락을 받았다면 위치값을 알아오는 코드를 진행
             initGoogleMapLocation();
         } else {
