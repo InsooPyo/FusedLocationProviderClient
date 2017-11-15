@@ -1,6 +1,5 @@
 package com.pyo.google.current.location;
 
-import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
@@ -8,16 +7,18 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
-import android.widget.Toast;
 
 /**
  * Created by pyoinsoo on 2017-10-28.
+ * 위치설정 및 퍼미션 체크
  */
 
-public final class PermissionUtils{
+public final class PermissionSettingUtils {
     /**
      * Runtime Permission Check
      */
@@ -42,18 +43,16 @@ public final class PermissionUtils{
     /**
      * 퍼미션에 대한 다이얼로그 확장
      */
-    public static class PermissionDialog extends DialogFragment{
+    public static class LocationSettingDialog extends DialogFragment{
         /**
          * 이 대화 상자의 새 인스턴스를 만들고 '확인'버튼을 클릭하면 호출 활동을 선택적으로 진행.
          */
-        public static PermissionDialog newInstance() {
-            PermissionDialog dialog = new PermissionDialog();
-            return dialog;
+        public static LocationSettingDialog newInstance() {
+            return new LocationSettingDialog();
         }
-
+        @NonNull
         @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-
+        public Dialog onCreateDialog( Bundle savedInstanceState) {
             return new AlertDialog.Builder(getActivity())
                     .setMessage("단말기 위치설정이 필요합니다.")
                     .setPositiveButton("확인", new DialogInterface.OnClickListener() {

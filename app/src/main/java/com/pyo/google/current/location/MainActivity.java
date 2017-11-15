@@ -7,11 +7,11 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -41,22 +41,11 @@ import com.google.android.gms.tasks.Task;
 
 public class MainActivity extends AppCompatActivity {
 
-    LocationManager locationManager;
-
-    /**
-     * Location Setting에 대한  API를 제공
-     */
-    private SettingsClient mSettingsClient;
-
     /**
      * FusedLocationProviderApi의 요청 파라미터를 저장
      */
     private LocationRequest mLocationRequest;
 
-    /**
-     * 클라이언트가 사용하고자하는 위치 서비스 유형을 저장합니다. 검사에 사용됩니다.
-     */
-    private LocationSettingsRequest mLocationSettingsRequest;
 
     /**
      * 위치 이벤트에 대한 콜백을 제공.
@@ -71,27 +60,23 @@ public class MainActivity extends AppCompatActivity {
     //구글 로케이션을 연결/연결실패를 처리해주는 클라이언트(play-services 11.0.0부터 바뀜)
     FusedLocationProviderClient mFusedLocationClient;
 
+    private String provider;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        /*
-         * 설정에서 GPS 사용유무
-         */
-        if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)){
-            //단말기 위치 설정
-            PermissionUtils.PermissionDialog.newInstance().show(getSupportFragmentManager(), "dialog");
+
+        provider = getIntent().getStringExtra("provider");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            checkMyPermissionLocation();
         } else {
-            if (Build.VERSION.SDK_INT >= 23) {
-                checkMyPermissionLocation();
-            } else {
-                initGoogleMapLocation();
-            }
+            initGoogleMapLocation();
         }
+
         SupportMapFragment mapFragment =
                 (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-        mapFragment.getMapAsync(new OnMapReadyCallback(){
+        mapFragment.getMapAsync(new OnMapReadyCallback() {
             @Override
             public void onMapReady(GoogleMap googleMap) {
                 /*if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -104,20 +89,26 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
     GoogleMap mMap;
+
     private void checkMyPermissionLocation() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
             //Permission Check
-            PermissionUtils.requestPermission(this, 10, Manifest.permission.ACCESS_FINE_LOCATION);
+            PermissionSettingUtils.requestPermission(this, 10, Manifest.permission.ACCESS_FINE_LOCATION);
         } else {
-            //권한을 받았을때 위치찾기 세팅을 시작한다
+            //권한을 받았다면 위치찾기 세팅을 시작한다
             initGoogleMapLocation();
         }
     }
+
     private void initGoogleMapLocation() {
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        mSettingsClient = LocationServices.getSettingsClient(this);
+        /**
+         * Location Setting에 대한  API를 제공
+         */
+        SettingsClient mSettingsClient = LocationServices.getSettingsClient(this);
         /*
          * 위치정보 결과를 리턴하는 Callback
          */
@@ -142,6 +133,7 @@ public class MainActivity extends AppCompatActivity {
                  */
                 //mFusedLocationClient.removeLocationUpdates(mLocationCallback);
             }
+
             //Location관련정보를 모두 사용할 수 있음을 의미
             @Override
             public void onLocationAvailability(LocationAvailability availability) {
@@ -153,17 +145,26 @@ public class MainActivity extends AppCompatActivity {
         mLocationRequest.setFastestInterval(5000);
         //여기선 한번만 위치정보를 가져오기 위함
         mLocationRequest.setNumUpdates(1);
-        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        if (provider.equalsIgnoreCase(LocationManager.GPS_PROVIDER)) {
+            //배터리소모에 상관없이 정확도를 최우선으로 고려
+            mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        }else{
+            //배터리와 정확도의 밸런스를 고려하여 위치정보를 획득(정확도 다소 높음)
+            mLocationRequest.setPriority(LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY);
+        }
+
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
         builder.addLocationRequest(mLocationRequest);
-        mLocationSettingsRequest = builder.build();
-
+        /**
+         * 클라이언트가 사용하고자하는 위치 서비스 유형을 저장합니다. 위치 설정에도 사용됩니다.
+         */
+        LocationSettingsRequest mLocationSettingsRequest = builder.build();
 
         Task<LocationSettingsResponse> locationResponse = mSettingsClient.checkLocationSettings(mLocationSettingsRequest);
         locationResponse.addOnSuccessListener(this, new OnSuccessListener<LocationSettingsResponse>() {
             @Override
             public void onSuccess(LocationSettingsResponse locationSettingsResponse) {
-                Log.e("onSuccess", "성공적으로 업데이트 됨.");
+                Log.e("Response", "Successful acquisition of location information!!");
                 //
                 if (ActivityCompat.checkSelfPermission(MainActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)
                         != PackageManager.PERMISSION_GRANTED) {
@@ -172,21 +173,23 @@ public class MainActivity extends AppCompatActivity {
                 mFusedLocationClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.myLooper());
             }
         });
+        //위치 정보를 설정 및 획득하지 못했을때 callback
         locationResponse.addOnFailureListener(this, new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        int statusCode = ((ApiException) e).getStatusCode();
-                        switch (statusCode) {
-                            case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                                Log.e("onFailure", "위치환경체크");
-                                break;
-                            case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                                String errorMessage = "위치설정체크";
-                                Log.e("onFailure", errorMessage);
-                        }
-                    }
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                int statusCode = ((ApiException) e).getStatusCode();
+                switch (statusCode) {
+                    case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
+                        Log.e("onFailure", "위치환경체크");
+                        break;
+                    case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
+                        String errorMessage = "위치설정체크";
+                        Log.e("onFailure", errorMessage);
+                }
+            }
         });
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
@@ -194,24 +197,16 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode != 10) {
             return;
         }
-        if (PermissionUtils.isPermissionGranted(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, grantResults,
+        if (PermissionSettingUtils.isPermissionGranted(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, grantResults,
                 Manifest.permission.ACCESS_FINE_LOCATION)) {
             //허락을 받았다면 위치값을 알아오는 코드를 진행
             initGoogleMapLocation();
-        }else{
-            Toast.makeText(this, "위치정보를 허락하셔야 앱을 사용하실수 있습니다", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "위치정보사용 허락을 하지않아 앱을 중지합니다", Toast.LENGTH_SHORT).show();
+            //finish();
         }
     }
 
-    /**
-     * 사용자가 위치설정을 하고 Back Key를 눌렀을때 실행
-     */
-    @Override
-    public void onRestart() {
-        super.onRestart();
-        startActivity(new Intent(this, MainActivity.class));
-        finish();
-    }
     /**
      * 위치정보 제거
      */
